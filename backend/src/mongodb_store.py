@@ -31,15 +31,18 @@ class MongoDBVectorStore:
         print(f"[MongoDB Store] Initialized with collection: {collection_name}")
 
     def add_documents(self, documents: List[Any], user_id: str = None):
-        """Chunk, embed and store documents in MongoDB"""
+        """Chunk, embed (with keyword augmentation) and store documents in MongoDB"""
         chunks = self.emb_pipe.chunk_documents(documents)
-        embeddings = self.emb_pipe.embed_chunks(chunks)
+        embeddings, keywords_per_chunk = self.emb_pipe.embed_chunks_with_keywords(chunks)
 
         records = []
         for i, chunk in enumerate(chunks):
             record = {
                 "text": chunk.page_content,
-                "metadata": chunk.metadata,
+                "metadata": {
+                    **chunk.metadata,
+                    "keywords": keywords_per_chunk[i],
+                },
                 "embedding": embeddings[i].tolist(),
                 "source": chunk.metadata.get("source", "Unknown"),
                 "user_id": user_id
